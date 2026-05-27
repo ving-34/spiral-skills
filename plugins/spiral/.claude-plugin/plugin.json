@@ -1,0 +1,13 @@
+{
+  "name": "spiral",
+  "version": "1.0.0",
+  "description": "Adversarial development spirals: /spiral runs a 5-phase loop (design → plan → architect → implement → evaluate) until an evaluator flags GREEN. /meta-spiral orchestrates N parallel spirals + a cross-cutting meta-evaluator for multi-feature integration. Deterministic, foreground-only, file-bus architecture.",
+  "author": {
+    "name": "ving-34",
+    "url": "https://github.com/ving-34"
+  },
+  "homepage": "https://github.com/ving-34/spiral-skills",
+  "repository": "https://github.com/ving-34/spiral-skills",
+  "license": "MIT",
+  "keywords": ["claude-code", "skills", "spiral", "meta-spiral", "agent-orchestration"]
+}

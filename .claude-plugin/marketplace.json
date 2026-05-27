@@ -1,0 +1,15 @@
+{
+  "name": "spiral-skills",
+  "owner": {
+    "name": "ving-34",
+    "url": "https://github.com/ving-34"
+  },
+  "plugins": [
+    {
+      "name": "spiral",
+      "source": "./plugins/spiral",
+      "description": "Adversarial development spiral (/spiral) and multi-feature meta-spiral (/meta-spiral) — deterministic, file-bus, foreground-only orchestration for award-grade craft.",
+      "version": "1.0.0"
+    }
+  ]
+}
