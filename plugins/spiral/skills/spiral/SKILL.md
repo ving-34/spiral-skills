@@ -190,7 +190,8 @@ Writes `iter-N/04-implementation.md` (≤ 800 words):
 - Known follow-ups (out of scope)
 - Hand-off notes for evaluator (≤ 5 sentences: how to exercise the feature, what state to seed)
 
-Never commits. Leaves changes in the worktree.
+Standalone /spiral: never commits, leaves changes in the worktree for the user to review.
+SUB-SPIRAL MODE (running inside /meta-spiral): the OPPOSITE — every iteration's final state MUST be committed on the worktree branch before the receipt goes back. The meta-merge consumes the BRANCH TIP via `git merge`; uncommitted worktree changes are silently dropped (this shipped stubs/stale work to main three times). Commit message: `spiral(<slug>): iter-N implementation`. Exclude `.spiral/` files.
 
 ## Phase 5 — Evaluator (opus, foreground)
 
@@ -239,8 +240,8 @@ When the evaluator catches improvements that are out of scope (dead code, stale 
 
 - One file per phase. If a sub-agent writes more or returns the file contents in its reply, re-issue with a tighter prompt — don't accept it.
 - Orchestrator never edits source. Only writes `.spiral/<slug>/brief.md` and reads receipts/verdicts.
-- No commits unless the user explicitly asks. CLAUDE.md governs commit hygiene.
-- Stage files explicitly when committing — never `git add -A`.
+- No commits unless the user explicitly asks. CLAUDE.md governs commit hygiene. EXCEPTION: in sub-spiral mode (under /meta-spiral) the worktree branch MUST carry committed work — see Phase 4.
+- Stage files explicitly when committing — never `git add -A`. (Sub-spiral-mode worktree commits may `add -A` then unstage `.spiral/` — the worktree contains only this spiral's work.)
 - Never `--no-verify` past hooks.
 - If two consecutive iterations score the same axis < 5, the bet is wrong, not the execution. Stop and surface to the user.
 - If a foreground sub-agent appears to hang (no return after a reasonable wall-clock for its task type), don't wait indefinitely — surface it to the user. Foreground SHOULD return; if it doesn't, that's a real failure to escalate, not poll around.

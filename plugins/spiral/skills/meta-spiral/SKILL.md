@@ -99,6 +99,8 @@ Slug becomes `.spiral/meta-<slug>/`. The leading `meta-` prefix is the orchestra
         branches).
       - Creates fresh integration worktree from main:
         `git worktree add .git-worktrees/meta-<slug>-iter-M main`
+      - Checks each sub-spiral worktree for uncommitted work (commits it on the sub-branch) and
+        spot-checks branch tips against 04-implementation.md claims BEFORE merging.
       - Cherry-picks or merges each sub-spiral branch into it, in the order from decomposition.
       - On conflict: tries algorithmic resolution per architectural notes in 00-decomposition.md.
         Escalates conflicts that need product judgment.
@@ -166,13 +168,17 @@ You are a sub-orchestrator for ONE sub-spiral inside a meta-spiral.
 
 2. Invoke the /spiral skill with args: "<SUB_SLUG> <one-line intent from the table>"
 
-3. Let /spiral run to completion (up to 4 iterations).
+3. Let /spiral run to completion (up to 4 iterations). This is SUB-SPIRAL MODE: the final
+   state MUST be committed on the worktree branch (`spiral(<SUB_SLUG>): iter-N implementation`,
+   no `.spiral/` files). The meta-merge consumes the branch TIP — uncommitted worktree changes
+   are silently lost. Before replying, verify `git -C <worktree> status --porcelain` is clean.
 
 4. Reply with ONLY:
    - Worktree path
    - Branch name
    - Final VERDICT (GREEN or EXHAUSTED-RED)
    - Path to final 05-evaluation.md
+   - Tip check: CLEAN (or what you had to commit)
 
 Do NOT summarize the work. Do NOT include scores. The meta-evaluator will read the files directly.
 ```
@@ -191,7 +197,8 @@ Reads:
 - Each sub-spiral's `04-implementation.md` (for worktree path + branch — the meta-orchestrator passes paths in the prompt)
 
 Actions:
-1. Create integration worktree: `git worktree add .git-worktrees/meta-<slug>-iter-M main`
+0. **Tip-integrity check (MANDATORY — three real incidents shipped stale tips).** For EACH sub-spiral worktree, run `git -C <worktree> status --porcelain`. `git merge` consumes the BRANCH TIP; anything uncommitted in the worktree is silently dropped. If dirty: commit everything on that worktree's branch first — `git -C <worktree> add -A` (then unstage any `.spiral/` files), `git -C <worktree> commit -m "spiral(<sub-slug>): iter-N implementation"`. Then spot-check the tip against the claims: pick 2-3 files named in that sub-spiral's `04-implementation.md` and confirm they exist on the branch (`git -C <worktree> show <branch>:<path>` succeeds, and stubs the doc says were replaced are actually gone). A mismatch means the sub-spiral lied or forgot to land work — STOP and report `MERGE-BLOCKED: <sub-slug> branch tip missing claimed work` rather than merging a stale tip.
+1. Create integration worktree: `git worktree add .git-worktrees/meta-<slug>-iter-M main` (add `-b meta-<slug>-iter-M` — main is usually checked out in the primary worktree, so the integration worktree needs its own branch).
 2. cd into it.
 3. For each sub-spiral in merge order: `git merge <sub-branch> --no-ff -m "meta-spiral: merge <sub-slug>"`. Use `--no-ff` so the integration history shows the structure.
 4. On conflict:
@@ -199,10 +206,12 @@ Actions:
    - For other conflicts: attempt 3-way resolution using the architectural notes from each sub-spiral's `03-architecture.md`.
    - If a conflict requires product judgment (e.g., two sub-spirals introduce competing UX patterns for the same surface), abort the merge and write `01-merge.md` with `MERGE-BLOCKED: <reason>` and STOP. The meta-orchestrator escalates to the user.
 5. After all merges: run `pnpm -r exec tsc --noEmit` and `pnpm test`. Fix import collisions and obvious post-merge breakage; do NOT add new features.
-6. Write absolute integration worktree path to `integration-worktree-path.txt` (single line, no other content).
+6. **Commit every post-merge fix on the integration branch before finishing.** The integration worktree's value IS its branch — the user (or a later session) merges `meta-<slug>-iter-M` into main, and uncommitted fixes evaporate at that point (real incident: stub→real-package swaps done in the integration worktree but never committed shipped stubs to main). Final check: `git status --porcelain` in the integration worktree must be empty (ignoring `.spiral/`).
+7. Write absolute integration worktree path to `integration-worktree-path.txt` (single line, no other content).
 
 Writes `01-merge.md` (≤ 600 words):
 - Worktree path + branch
+- Tip-integrity log (one bullet per sub-spiral: tip clean / committed N leftover files / BLOCKED-missing-work)
 - Merge log (one bullet per sub-spiral: clean / N conflicts resolved)
 - Conflict resolutions (file:line + which side won + why)
 - Typecheck status per package
@@ -278,7 +287,7 @@ Both `/spiral` evaluators and the meta-evaluator can include `SPAWN_TASKS:` bloc
 
 - One file per phase. If a sub-agent returns file contents in its reply, re-issue with a tighter prompt.
 - Meta-orchestrator never edits source. Only writes `.spiral/meta-<slug>/brief.md` and reads receipts/verdicts/paths.
-- No commits unless the user explicitly asks. CLAUDE.md governs commit hygiene.
+- No commits to main (or any user branch) unless the user explicitly asks. CLAUDE.md governs commit hygiene. EXCEPTION — spiral worktree branches and the integration branch REQUIRE commits: `git merge` consumes branch tips, so work left uncommitted in a worktree silently vanishes at merge time (this shipped stubs to main three times). Phase C's tip-integrity check (step 0) and clean-tree check (step 6) are mandatory, not optional hygiene.
 - Never `--no-verify` past hooks.
 - Cap parallel sub-spirals at 4 per wave. Cap meta-iterations at 3.
 - If a sub-spiral exhausts its 4-iteration cap with RED, STOP the meta-spiral — do not merge a broken sub-feature.
